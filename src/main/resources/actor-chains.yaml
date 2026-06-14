@@ -1,0 +1,7 @@
+###############################################################################
+# Actor-chain policy for zylos-service-catalog.
+###############################################################################
+defaults:
+  rejectIfNoPathMatch: false
+  allowEmptyChain: false
+  maxChainDepth: 5
