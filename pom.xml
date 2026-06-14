@@ -1,81 +1,228 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.0</version>
-        <relativePath/> <!-- lookup parent from repository -->
-    </parent>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
     <groupId>app.zylos</groupId>
-    <artifactId>zylos-service-catalog</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>zylos-service-catalog</name>
-    <description>zylos-service-catalog</description>
+    <artifactId>zylos-service-parent</artifactId>
+    <version>0.5.0</version>
+    <relativePath/>
+  </parent>
+
+  <artifactId>zylos-service-catalog</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>zylos-service-catalog</name>
+  <description>Product catalog bounded context (read-heavy showcase)</description>
+
+  <url/>
+  <licenses>
+    <license/>
+  </licenses>
+  <developers>
+    <developer/>
+  </developers>
+  <scm>
+    <connection/>
+    <developerConnection/>
+    <tag/>
     <url/>
-    <licenses>
-        <license/>
-    </licenses>
-    <developers>
-        <developer/>
-    </developers>
-    <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
-    </scm>
-    <properties>
-        <java.version>25</java.version>
-    </properties>
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-opentelemetry</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc</artifactId>
-        </dependency>
+  </scm>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-opentelemetry-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+  <properties>
+    <jib-maven-plugin.version>3.5.1</jib-maven-plugin.version>
+    <cyclonedx-maven-plugin.version>2.9.1</cyclonedx-maven-plugin.version>
+    <env.GITHUB_REPOSITORY>local-dev/untracked-repo</env.GITHUB_REPOSITORY>
+    <git.commit.id.full>local-untracked-commit</git.commit.id.full>
+  </properties>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-opentelemetry</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>app.zylos</groupId>
+      <artifactId>zylos-infra-security-starter</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-opentelemetry-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <repositories>
+    <repository>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/zylos-platform/zylos-service-parent</url>
+    </repository>
+  </repositories>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- Avro: generate referenced types (imports, in dependency order) first,
+           then the leaf event schemas in the disjoint events/ sourceDirectory. -->
+      <plugin>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>schemas</id>
+            <configuration>
+              <sourceDirectory>${project.basedir}/src/main/avro/events</sourceDirectory>
+              <imports>
+                <import>${project.basedir}/src/main/avro/types/money.avsc</import>
+                <import>${project.basedir}/src/main/avro/types/producer.avsc</import>
+                <import>${project.basedir}/src/main/avro/types/product_state.avsc</import>
+              </imports>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Jib: builds a layered OCI image without Docker daemon -->
+      <plugin>
+        <groupId>com.google.cloud.tools</groupId>
+        <artifactId>jib-maven-plugin</artifactId>
+        <version>${jib-maven-plugin.version}</version>
+        <configuration>
+          <from>
+            <!-- Distroless Java 25, non-root user (UID 65532) -->
+            <image>gcr.io/distroless/java25-debian13:nonroot</image>
+          </from>
+          <to>
+            <!-- Override at command-line: -Djib.to.image=ghcr.io/.../zylos-hello-service -->
+            <image>zylos-hello-service</image>
+            <tags>
+              <tag>${project.version}</tag>
+            </tags>
+          </to>
+          <container>
+            <user>nonroot</user>
+            <ports>
+              <port>8080</port>
+              <port>9000</port>
+              <!-- management/actuator -->
+            </ports>
+            <jvmFlags>
+              <jvmFlag>-XX:+UseContainerSupport</jvmFlag>
+              <jvmFlag>-XX:MaxRAMPercentage=75.0</jvmFlag>
+              <jvmFlag>-XX:+ExitOnOutOfMemoryError</jvmFlag>
+            </jvmFlags>
+            <labels>
+              <org.opencontainers.image.source>https://github.com/${env.GITHUB_REPOSITORY}</org.opencontainers.image.source>
+              <org.opencontainers.image.revision>${git.commit.id.full}</org.opencontainers.image.revision>
+              <org.opencontainers.image.title>${project.artifactId}</org.opencontainers.image.title>
+              <org.opencontainers.image.description>${project.description}</org.opencontainers.image.description>
+            </labels>
+            <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+          </container>
+        </configuration>
+      </plugin>
+
+      <!-- CycloneDX SBOM (Software Bill of Materials) -->
+      <plugin>
+        <groupId>org.cyclonedx</groupId>
+        <artifactId>cyclonedx-maven-plugin</artifactId>
+        <version>${cyclonedx-maven-plugin.version}</version>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <includes>
+            <include>**/*IT.java</include>
+          </includes>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>fix-avro-dangling-javadoc</id>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <phase>process-sources</phase>
+            <configuration>
+              <target>
+                <replaceregexp flags="g" match="/\*\*(\s*\* Autogenerated by Avro)" replace="/*\1">
+                  <fileset dir="${project.build.directory}/generated-sources/avro" includes="**/*.java"/>
+                </replaceregexp>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>
