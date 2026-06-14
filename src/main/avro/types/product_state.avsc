@@ -1,0 +1,100 @@
+{
+  "type": "record",
+  "name": "ProductState",
+  "namespace": "app.zylos.catalog.v1",
+  "doc": "Full public snapshot of a Product (event-carried state transfer). Created/updated events carry the complete current state so projections are idempotent upserts.",
+  "fields": [
+    {
+      "name": "productId",
+      "type": "string"
+    },
+    {
+      "name": "version",
+      "type": "long",
+      "doc": "Monotonic aggregate revision; projections apply last-writer-wins on this."
+    },
+    {
+      "name": "sku",
+      "type": "string"
+    },
+    {
+      "name": "name",
+      "type": "string"
+    },
+    {
+      "name": "description",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "categoryId",
+      "type": "string"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "ProductStatus",
+        "symbols": [
+          "DRAFT",
+          "ACTIVE",
+          "DISCONTINUED"
+        ]
+      }
+    },
+    {
+      "name": "listPrice",
+      "type": "app.zylos.common.v1.Money"
+    },
+    {
+      "name": "variants",
+      "default": [],
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "ProductVariant",
+          "fields": [
+            {
+              "name": "variantId",
+              "type": "string"
+            },
+            {
+              "name": "sku",
+              "type": "string"
+            },
+            {
+              "name": "attributes",
+              "type": {
+                "type": "map",
+                "values": "string"
+              },
+              "default": {}
+            },
+            {
+              "name": "listPrice",
+              "type": "app.zylos.common.v1.Money"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "createdAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    },
+    {
+      "name": "updatedAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    }
+  ]
+}
