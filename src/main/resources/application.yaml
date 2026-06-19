@@ -23,6 +23,7 @@ management:
     web:
       exposure:
         include: health,info,prometheus,metrics
+      base-path: /actuator
   endpoint:
     health:
       probes:
@@ -36,11 +37,23 @@ management:
   info:
     git:
       mode: full
+  metrics:
+    tags:
+      application: ${spring.application.name}
   opentelemetry:
     resource-attributes:
       service.name: ${spring.application.name}
       service.version: ${app.version:unknown}
       deployment.environment: ${spring.profiles.active}
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://opentelemetry-collector.observability.svc.cluster.local:4318/v1/traces}
+  otlp:
+    metrics:
+      export:
+        enabled: true
+        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:http://opentelemetry-collector.observability.svc.cluster.local:4318/v1/metrics}
 
 app:
   version: "@project.version@"
