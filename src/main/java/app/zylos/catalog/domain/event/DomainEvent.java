@@ -10,7 +10,16 @@ import app.zylos.catalog.domain.vo.ProductId;
  * concerns.
  */
 public sealed interface DomainEvent
-        permits ProductCreated, ProductUpdated, ProductPublished, ProductDiscontinued, VariantAdded {
+        permits ProductCreated,
+                ProductUpdated,
+                ProductPublished,
+                ProductUnpublished,
+                ProductDiscontinued,
+                VariantAdded,
+                VariantUpdated,
+                VariantActivated,
+                VariantDeactivated,
+                VariantDiscontinued {
 
     ProductId productId();
 

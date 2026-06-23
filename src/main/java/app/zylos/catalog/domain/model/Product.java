@@ -13,14 +13,26 @@ import app.zylos.catalog.domain.vo.*;
 /**
  * Product aggregate root for the Catalog bounded context.
  *
- * <p>Consistency boundary: every invariant (non-blank name, non-negative list price, SKU uniqueness
- * across variants, lifecycle transition rules) holds within a single instance and is enforced on
- * each mutating command. A successful command increments the monotonic {@code version} by one and
- * records a thin {@link DomainEvent}; that version is the last-writer-wins key used by the read
- * projection.
+ * <p>Consistency boundary: every invariant holds within a single instance and is enforced on each
+ * mutating command. A successful command increments the monotonic {@code version} by exactly one and
+ * records one or more thin {@link DomainEvent}s, all carrying the resulting version; that version is
+ * the last-writer-wins key for the read projection.
  *
- * <p>Per bounded-context discipline, Catalog owns only the seller-set list price — effective and
- * discounted pricing belong to Pricing, availability to Inventory.
+ * <p>Two orthogonal lifecycle axes are coordinated here:
+ *
+ * <ul>
+ *   <li>{@link ProductStatus} — storefront visibility of the product.
+ *   <li>{@link VariantStatus} — availability of each variant.
+ * </ul>
+ *
+ * <p>Domain rules across the two axes: discontinuing a product cascades {@code DISCONTINUED} to all
+ * its variants; deactivating or discontinuing the last purchasable variant of a {@code PUBLISHED}
+ * product auto-demotes the product to {@code UNPUBLISHED}. The reverse — buyer-facing buyability,
+ * where product visibility overrides variant availability — is a read/projection concern and is
+ * deliberately not modeled here, to avoid a second source of truth.
+ *
+ * <p>Per bounded-context discipline, Catalog owns only the seller-set list price (per variant);
+ * effective/discounted pricing belongs to Pricing and availability to Inventory.
  */
 public final class Product {
 
@@ -34,7 +46,6 @@ public final class Product {
     private String name;
     private @Nullable String description;
     private CategoryId categoryId;
-    private Money listPrice;
     private ProductAttributes attributes;
     private ProductStatus status;
     private long version;
@@ -44,7 +55,6 @@ public final class Product {
             String name,
             @Nullable String description,
             CategoryId categoryId,
-            Money listPrice,
             ProductAttributes attributes,
             ProductStatus status,
             List<ProductVariant> variants,
@@ -53,55 +63,64 @@ public final class Product {
         this.name = normaliseName(name);
         this.description = normaliseDescription(description);
         this.categoryId = Objects.requireNonNull(categoryId, "categoryId must not be null");
-        this.listPrice = requireNonNegativePrice(listPrice);
         this.attributes = Objects.requireNonNull(attributes, "attributes must not be null");
-        this.status = Objects.requireNonNull(status, "status must not be null");
-        this.variants = new ArrayList<>(requireUniqueSkus(variants));
+        this.status = Objects.requireNonNull(status, "visibility must not be null");
+        Objects.requireNonNull(variants, "variants must not be null");
+        if (variants.isEmpty()) {
+            throw new CatalogDomainException("A product must have at least one variant");
+        }
+        requireUniqueSkus(variants);
+        this.variants = new ArrayList<>(variants);
         this.version = version;
     }
 
     /**
-     * Creates a new product in {@code DRAFT} at version 1, recording {@link ProductCreated}.
+     * Creates a new product in {@code DRAFT} at version 1 with at least one ({@code ACTIVE}) variant,
+     * recording {@link ProductCreated}.
      */
     public static Product create(
             ProductId id,
             String name,
             @Nullable String description,
             CategoryId categoryId,
-            Money listPrice,
-            ProductAttributes attributes) {
-        Product product = new Product(
-                id, name, description, categoryId, listPrice, attributes, ProductStatus.DRAFT, List.of(), 1L);
+            ProductAttributes attributes,
+            List<VariantDraft> initialVariants) {
+        Objects.requireNonNull(initialVariants, "initialVariants must not be null");
+        List<ProductVariant> built = initialVariants.stream()
+                .map(d -> ProductVariant.create(d.id(), d.sku(), d.listPrice(), d.attributes()))
+                .toList();
+        Product product = new Product(id, name, description, categoryId, attributes, ProductStatus.DRAFT, built, 1L);
         product.record(new ProductCreated(id, product.version));
         return product;
     }
 
     /**
-     * Rehydrates a product from persisted state without recording events or altering the version.
-     * For exclusive use by repository adapters.
+     * Rehydrates a product from persisted state without recording events. For repository adapters.
      */
     public static Product reconstitute(
             ProductId id,
             String name,
             @Nullable String description,
             CategoryId categoryId,
-            Money listPrice,
             ProductAttributes attributes,
-            ProductStatus status,
+            ProductStatus visibility,
             List<ProductVariant> variants,
             long version) {
+
         if (version < 1L) {
             throw new CatalogDomainException("version must be >= 1, was " + version);
         }
-        return new Product(id, name, description, categoryId, listPrice, attributes, status, variants, version);
+        return new Product(id, name, description, categoryId, attributes, visibility, variants, version);
     }
 
     private static String normaliseName(String name) {
         Objects.requireNonNull(name, "name must not be null");
         String trimmed = name.trim();
+
         if (trimmed.isEmpty()) {
             throw new CatalogDomainException("name must not be blank");
         }
+
         if (trimmed.length() > MAX_NAME_LENGTH) {
             throw new CatalogDomainException("name must be at most %d characters".formatted(MAX_NAME_LENGTH));
         }
@@ -112,10 +131,12 @@ public final class Product {
         if (description == null) {
             return null;
         }
+
         String trimmed = description.trim();
         if (trimmed.isEmpty()) {
             return null;
         }
+
         if (trimmed.length() > MAX_DESCRIPTION_LENGTH) {
             throw new CatalogDomainException(
                     "description must be at most %d characters".formatted(MAX_DESCRIPTION_LENGTH));
@@ -123,66 +144,88 @@ public final class Product {
         return trimmed;
     }
 
-    private static Money requireNonNegativePrice(Money listPrice) {
-        Objects.requireNonNull(listPrice, "listPrice must not be null");
-
-        if (listPrice.isNegative()) {
-            throw new CatalogDomainException("listPrice must not be negative: " + listPrice);
-        }
-        return listPrice;
-    }
-
-    private static List<ProductVariant> requireUniqueSkus(List<ProductVariant> variants) {
-        Objects.requireNonNull(variants, "variants must not be null");
+    private static void requireUniqueSkus(List<ProductVariant> variants) {
         long distinctSkus =
                 variants.stream().map(ProductVariant::sku).distinct().count();
 
         if (distinctSkus != variants.size()) {
             throw new CatalogDomainException("Variants must have unique SKUs");
         }
-        return variants;
     }
 
     public void updateDetails(
-            String name,
-            @Nullable String description,
-            CategoryId categoryId,
-            Money listPrice,
-            ProductAttributes attributes) {
-        ensureNotDiscontinued();
+            String name, @Nullable String description, CategoryId categoryId, ProductAttributes attributes) {
+        ensureProductMutable();
         this.name = normaliseName(name);
         this.description = normaliseDescription(description);
         this.categoryId = Objects.requireNonNull(categoryId, "categoryId must not be null");
-        this.listPrice = requireNonNegativePrice(listPrice);
         this.attributes = Objects.requireNonNull(attributes, "attributes must not be null");
         bumpVersion();
         record(new ProductUpdated(id, version));
     }
 
-    public ProductVariant addVariant(VariantId variantId, Sku sku, ProductAttributes variantAttributes) {
-        ensureNotDiscontinued();
-        Objects.requireNonNull(sku, "sku must not be null");
+    public ProductVariant addVariant(VariantDraft draft) {
+        ensureProductMutable();
+        Objects.requireNonNull(draft, "draft must not be null");
 
         if (variants.size() >= MAX_VARIANTS) {
             throw new CatalogDomainException("A product may have at most %d variants".formatted(MAX_VARIANTS));
         }
 
-        if (variants.stream().anyMatch(v -> v.sku().equals(sku))) {
-            throw new CatalogDomainException("Duplicate SKU within product: " + sku);
-        }
-
-        ProductVariant variant = ProductVariant.create(variantId, sku, variantAttributes);
+        ensureSkuUniqueForNew(draft.sku());
+        ProductVariant variant = ProductVariant.create(draft.id(), draft.sku(), draft.listPrice(), draft.attributes());
         variants.add(variant);
         bumpVersion();
         record(new VariantAdded(id, variant.id(), version));
         return variant;
     }
 
+    public void updateVariant(VariantId variantId, Sku sku, Money listPrice, ProductAttributes attributes) {
+        ensureProductMutable();
+        ProductVariant variant = requireVariant(variantId);
+
+        if (variant.status() == VariantStatus.DISCONTINUED) {
+            throw new CatalogDomainException("Cannot update a discontinued variant: " + variantId);
+        }
+
+        Objects.requireNonNull(sku, "sku must not be null");
+        ensureSkuUniqueExcluding(variantId, sku);
+        variant.changeBusinessDetails(sku, listPrice, attributes);
+        bumpVersion();
+        record(new VariantUpdated(id, variantId, version));
+    }
+
+    public void activateVariant(VariantId variantId) {
+        ensureProductMutable();
+        ProductVariant variant = requireVariant(variantId);
+        variant.transitionTo(VariantStatus.ACTIVE);
+        bumpVersion();
+        record(new VariantActivated(id, variantId, version));
+    }
+
+    public void deactivateVariant(VariantId variantId) {
+        ensureProductMutable();
+        ProductVariant variant = requireVariant(variantId);
+        variant.transitionTo(VariantStatus.INACTIVE);
+        bumpVersion();
+        record(new VariantDeactivated(id, variantId, version));
+        autoDemoteIfNoPurchasableVariant();
+    }
+
+    public void discontinueVariant(VariantId variantId) {
+        ensureProductMutable();
+        ProductVariant variant = requireVariant(variantId);
+        variant.transitionTo(VariantStatus.DISCONTINUED);
+        bumpVersion();
+        record(new VariantDiscontinued(id, variantId, version));
+        autoDemoteIfNoPurchasableVariant();
+    }
+
     public void publish() {
         status.ensureCanTransitionTo(ProductStatus.PUBLISHED);
 
-        if (variants.isEmpty()) {
-            throw new CatalogDomainException("Cannot publish a product with no variants: " + id);
+        if (variants.stream().noneMatch(v -> v.status().isPurchasable())) {
+            throw new CatalogDomainException("Cannot publish a product with no purchasable (ACTIVE) variant: " + id);
         }
 
         status = ProductStatus.PUBLISHED;
@@ -190,9 +233,23 @@ public final class Product {
         record(new ProductPublished(id, version));
     }
 
+    public void unpublish() {
+        status.ensureCanTransitionTo(ProductStatus.UNPUBLISHED);
+        status = ProductStatus.UNPUBLISHED;
+        bumpVersion();
+        record(new ProductUnpublished(id, version));
+    }
+
     public void discontinue() {
         status.ensureCanTransitionTo(ProductStatus.DISCONTINUED);
         status = ProductStatus.DISCONTINUED;
+
+        for (ProductVariant variant : variants) {
+            if (variant.status() != VariantStatus.DISCONTINUED) {
+                variant.transitionTo(VariantStatus.DISCONTINUED);
+            }
+        }
+
         bumpVersion();
         record(new ProductDiscontinued(id, version));
     }
@@ -222,10 +279,6 @@ public final class Product {
         return categoryId;
     }
 
-    public Money listPrice() {
-        return listPrice;
-    }
-
     public ProductAttributes attributes() {
         return attributes;
     }
@@ -242,6 +295,38 @@ public final class Product {
         return version;
     }
 
+    private void autoDemoteIfNoPurchasableVariant() {
+        if (status == ProductStatus.PUBLISHED
+                && variants.stream().noneMatch(v -> v.status().isPurchasable())) {
+            status = ProductStatus.UNPUBLISHED;
+            record(new ProductUnpublished(id, version)); // shares the current command's version
+        }
+    }
+
+    private ProductVariant requireVariant(VariantId variantId) {
+        Objects.requireNonNull(variantId, "variantId must not be null");
+        return variants.stream()
+                .filter(v -> v.id().equals(variantId))
+                .findFirst()
+                .orElseThrow(() -> new CatalogDomainException("Variant not found: " + variantId));
+    }
+
+    private void ensureSkuUniqueForNew(Sku sku) {
+        if (variants.stream().anyMatch(v -> v.sku().equals(sku))) {
+            throw new CatalogDomainException("Duplicate SKU within product: " + sku);
+        }
+    }
+
+    private void ensureSkuUniqueExcluding(VariantId excluded, Sku sku) {
+        boolean clash = variants.stream()
+                .filter(v -> !v.id().equals(excluded))
+                .anyMatch(v -> v.sku().equals(sku));
+
+        if (clash) {
+            throw new CatalogDomainException("Duplicate SKU within product: " + sku);
+        }
+    }
+
     private void record(DomainEvent event) {
         domainEvents.add(event);
     }
@@ -250,7 +335,7 @@ public final class Product {
         version = Math.incrementExact(version);
     }
 
-    private void ensureNotDiscontinued() {
+    private void ensureProductMutable() {
         if (status == ProductStatus.DISCONTINUED) {
             throw new CatalogDomainException("Cannot modify a discontinued product: " + id);
         }
@@ -274,6 +359,6 @@ public final class Product {
 
     @Override
     public String toString() {
-        return "Product[id=%s, status=%s, version=%d, variants=%d]".formatted(id, status, version, variants.size());
+        return "Product[id=%s, visibility=%s, version=%d, variants=%d]".formatted(id, status, version, variants.size());
     }
 }
