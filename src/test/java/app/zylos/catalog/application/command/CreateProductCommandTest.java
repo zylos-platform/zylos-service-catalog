@@ -9,14 +9,12 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import app.zylos.catalog.domain.vo.CategoryId;
-import app.zylos.catalog.domain.vo.Money;
-import app.zylos.catalog.domain.vo.ProductAttributes;
-import app.zylos.catalog.domain.vo.Sku;
+import app.zylos.catalog.domain.vo.*;
 
 class CreateProductCommandTest {
 
     private static final Currency USD = Currency.getInstance("USD");
+    private static final SellerId SELLER = SellerId.newId();
 
     private static NewVariant variant() {
         return new NewVariant(Sku.of("SKU-1"), Money.ofMinor(100, USD), ProductAttributes.empty());
@@ -25,15 +23,22 @@ class CreateProductCommandTest {
     @Test
     void rejectsNullRequiredFields() {
         assertThatThrownBy(() -> new CreateProductCommand(
-                        "key", null, null, CategoryId.newId(), ProductAttributes.empty(), List.of(variant())))
+                        "key", SELLER, null, null, CategoryId.newId(), ProductAttributes.empty(), List.of(variant())))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void rejectsNullSeller() {
+        assertThatThrownBy(() -> new CreateProductCommand(
+                        "key", null, "Name", null, CategoryId.newId(), ProductAttributes.empty(), List.of(variant())))
                 .isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void variantsListIsDefensivelyCopiedAndImmutable() {
         List<NewVariant> mutable = new ArrayList<>(List.of(variant()));
-        CreateProductCommand command =
-                new CreateProductCommand("key", "Name", null, CategoryId.newId(), ProductAttributes.empty(), mutable);
+        CreateProductCommand command = new CreateProductCommand(
+                "key", SELLER, "Name", null, CategoryId.newId(), ProductAttributes.empty(), mutable);
         mutable.clear(); // must not affect the command
         assertThat(command.variants()).hasSize(1);
         assertThatThrownBy(() -> command.variants().add(variant())).isInstanceOf(UnsupportedOperationException.class);
@@ -44,7 +49,7 @@ class CreateProductCommandTest {
         List<NewVariant> withNull = new ArrayList<>();
         withNull.add(null);
         assertThatThrownBy(() -> new CreateProductCommand(
-                        "key", "Name", null, CategoryId.newId(), ProductAttributes.empty(), withNull))
+                        "key", SELLER, "Name", null, CategoryId.newId(), ProductAttributes.empty(), withNull))
                 .isInstanceOf(NullPointerException.class);
     }
 }

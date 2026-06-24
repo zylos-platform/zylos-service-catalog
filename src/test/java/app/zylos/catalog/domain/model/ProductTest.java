@@ -16,6 +16,7 @@ import app.zylos.catalog.domain.vo.*;
 class ProductTest {
 
     private static final Currency USD = Currency.getInstance("USD");
+    private static final SellerId SELLER = SellerId.newId();
 
     private static VariantDraft draft(String sku, long minor) {
         return new VariantDraft(VariantId.newId(), Sku.of(sku), Money.ofMinor(minor, USD), ProductAttributes.empty());
@@ -25,6 +26,7 @@ class ProductTest {
         List<VariantDraft> initial = drafts.length == 0 ? List.of(draft("SKU-1", 19999)) : List.of(drafts);
         return Product.create(
                 ProductId.newId(),
+                SELLER,
                 "Wireless Headphones",
                 "Over-ear, noise cancelling",
                 CategoryId.newId(),
@@ -35,7 +37,7 @@ class ProductTest {
     @Test
     void createStartsInDraftAtVersionOneWithActiveVariant() {
         Product product = newDraftProduct();
-        assertThat(product.status()).isEqualTo(ProductStatus.DRAFT);
+        assertThat(product.visibility()).isEqualTo(ProductStatus.DRAFT);
         assertThat(product.version()).isEqualTo(1L);
         assertThat(product.variants())
                 .singleElement()
@@ -45,9 +47,47 @@ class ProductTest {
     }
 
     @Test
+    void ownershipIsCapturedAtCreationAndSurvivesCommandsAndRoundTrip() {
+        Product product = newDraftProduct();
+        assertThat(product.sellerId()).isEqualTo(SELLER);
+
+        // mutating commands must never change ownership
+        product.updateDetails("New Name", null, CategoryId.newId(), ProductAttributes.empty());
+        product.addVariant(draft("SKU-2", 100));
+        product.publish();
+        assertThat(product.sellerId()).isEqualTo(SELLER);
+
+        // ownership round-trips through reconstitution
+        Product rehydrated = Product.reconstitute(
+                product.id(),
+                product.sellerId(),
+                product.name(),
+                product.description(),
+                product.categoryId(),
+                product.attributes(),
+                product.visibility(),
+                product.variants(),
+                product.version());
+        assertThat(rehydrated.sellerId()).isEqualTo(SELLER);
+    }
+
+    @Test
+    void createRejectsNullSeller() {
+        assertThatThrownBy(() -> Product.create(
+                        ProductId.newId(),
+                        null,
+                        "X",
+                        null,
+                        CategoryId.newId(),
+                        ProductAttributes.empty(),
+                        List.of(draft("SKU-1", 1))))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
     void createRejectsEmptyVariantList() {
         assertThatThrownBy(() -> Product.create(
-                        ProductId.newId(), "X", null, CategoryId.newId(), ProductAttributes.empty(), List.of()))
+                        ProductId.newId(), SELLER, "X", null, CategoryId.newId(), ProductAttributes.empty(), List.of()))
                 .isInstanceOf(CatalogDomainException.class)
                 .hasMessageContaining("at least one variant");
     }
@@ -62,6 +102,7 @@ class ProductTest {
     void createRejectsBlankName() {
         assertThatThrownBy(() -> Product.create(
                         ProductId.newId(),
+                        SELLER,
                         "  ",
                         null,
                         CategoryId.newId(),
@@ -94,11 +135,11 @@ class ProductTest {
     @Test
     void updateVariantChangesBusinessFieldsWithUniquenessExcludingSelf() {
         Product product = newDraftProduct(draft("SKU-1", 100), draft("SKU-2", 200));
-        VariantId v1 = product.variants().getFirst().id();
+        VariantId v1 = product.variants().get(0).id();
         product.pullDomainEvents();
 
         product.updateVariant(v1, Sku.of("SKU-1"), Money.ofMinor(150, USD), ProductAttributes.empty());
-        assertThat(product.variants().getFirst().listPrice()).isEqualTo(Money.ofMinor(150, USD));
+        assertThat(product.variants().get(0).listPrice()).isEqualTo(Money.ofMinor(150, USD));
         assertThat(product.pullDomainEvents()).singleElement().isInstanceOf(VariantUpdated.class);
 
         assertThatThrownBy(() ->
@@ -109,7 +150,7 @@ class ProductTest {
     @Test
     void publishRequiresAPurchasableVariant() {
         Product product = newDraftProduct();
-        VariantId v = product.variants().getFirst().id();
+        VariantId v = product.variants().get(0).id();
         product.deactivateVariant(v);
         assertThatThrownBy(product::publish)
                 .isInstanceOf(CatalogDomainException.class)
@@ -120,20 +161,19 @@ class ProductTest {
     void publishUnpublishRepublishCycle() {
         Product product = newDraftProduct();
         product.publish();
-        assertThat(product.status()).isEqualTo(ProductStatus.PUBLISHED);
+        assertThat(product.visibility()).isEqualTo(ProductStatus.PUBLISHED);
         product.unpublish();
-        assertThat(product.status()).isEqualTo(ProductStatus.UNPUBLISHED);
+        assertThat(product.visibility()).isEqualTo(ProductStatus.UNPUBLISHED);
         product.publish();
-        assertThat(product.status()).isEqualTo(ProductStatus.PUBLISHED);
+        assertThat(product.visibility()).isEqualTo(ProductStatus.PUBLISHED);
     }
 
     @Test
     void draftIsAOneWayOnRamp() {
         Product product = newDraftProduct();
         product.publish();
-        // no command returns to DRAFT; unpublish goes to UNPUBLISHED, never DRAFT
         product.unpublish();
-        assertThat(product.status()).isEqualTo(ProductStatus.UNPUBLISHED);
+        assertThat(product.visibility()).isEqualTo(ProductStatus.UNPUBLISHED);
         assertThat(ProductStatus.UNPUBLISHED.canTransitionTo(ProductStatus.DRAFT))
                 .isFalse();
     }
@@ -142,12 +182,12 @@ class ProductTest {
     void deactivatingLastPurchasableVariantAutoDemotesPublishedProduct() {
         Product product = newDraftProduct();
         product.publish();
-        VariantId v = product.variants().getFirst().id();
+        VariantId v = product.variants().get(0).id();
         product.pullDomainEvents();
 
         product.deactivateVariant(v);
 
-        assertThat(product.status()).isEqualTo(ProductStatus.UNPUBLISHED);
+        assertThat(product.visibility()).isEqualTo(ProductStatus.UNPUBLISHED);
         List<DomainEvent> events = product.pullDomainEvents();
         assertThat(events).hasSize(2);
         assertThat(events).anyMatch(VariantDeactivated.class::isInstance);
@@ -159,9 +199,9 @@ class ProductTest {
     void deactivatingOneOfTwoVariantsDoesNotDemote() {
         Product product = newDraftProduct(draft("SKU-1", 100), draft("SKU-2", 200));
         product.publish();
-        VariantId v1 = product.variants().getFirst().id();
+        VariantId v1 = product.variants().get(0).id();
         product.deactivateVariant(v1);
-        assertThat(product.status()).isEqualTo(ProductStatus.PUBLISHED);
+        assertThat(product.visibility()).isEqualTo(ProductStatus.PUBLISHED);
     }
 
     @Test
@@ -172,7 +212,7 @@ class ProductTest {
 
         product.discontinue();
 
-        assertThat(product.status()).isEqualTo(ProductStatus.DISCONTINUED);
+        assertThat(product.visibility()).isEqualTo(ProductStatus.DISCONTINUED);
         assertThat(product.variants()).allMatch(v -> v.status() == VariantStatus.DISCONTINUED);
         assertThat(product.pullDomainEvents()).singleElement().isInstanceOf(ProductDiscontinued.class);
 
@@ -183,7 +223,7 @@ class ProductTest {
     @Test
     void cannotUpdateDiscontinuedVariant() {
         Product product = newDraftProduct();
-        VariantId v = product.variants().getFirst().id();
+        VariantId v = product.variants().get(0).id();
         product.discontinueVariant(v);
         assertThatThrownBy(() ->
                         product.updateVariant(v, Sku.of("SKU-X"), Money.ofMinor(1, USD), ProductAttributes.empty()))
@@ -219,6 +259,7 @@ class ProductTest {
                 VariantStatus.ACTIVE);
         Product product = Product.reconstitute(
                 ProductId.newId(),
+                SELLER,
                 "Name",
                 "desc",
                 CategoryId.newId(),
@@ -227,7 +268,7 @@ class ProductTest {
                 List.of(variant),
                 7L);
         assertThat(product.version()).isEqualTo(7L);
-        assertThat(product.status()).isEqualTo(ProductStatus.PUBLISHED);
+        assertThat(product.visibility()).isEqualTo(ProductStatus.PUBLISHED);
         assertThat(product.pullDomainEvents()).isEmpty();
     }
 
@@ -235,6 +276,7 @@ class ProductTest {
     void reconstituteRejectsInvalidVersionAndEmptyVariants() {
         assertThatThrownBy(() -> Product.reconstitute(
                         ProductId.newId(),
+                        SELLER,
                         "N",
                         null,
                         CategoryId.newId(),
@@ -256,6 +298,7 @@ class ProductTest {
                 VariantStatus.ACTIVE);
         Product p1 = Product.reconstitute(
                 id,
+                SELLER,
                 "A",
                 null,
                 CategoryId.newId(),
@@ -265,6 +308,7 @@ class ProductTest {
                 1L);
         Product p2 = Product.reconstitute(
                 id,
+                SellerId.newId(),
                 "B",
                 null,
                 CategoryId.newId(),

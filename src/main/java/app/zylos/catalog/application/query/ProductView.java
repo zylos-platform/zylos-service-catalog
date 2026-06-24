@@ -9,6 +9,7 @@ import app.zylos.catalog.domain.model.ProductStatus;
 import app.zylos.catalog.domain.vo.CategoryId;
 import app.zylos.catalog.domain.vo.ProductAttributes;
 import app.zylos.catalog.domain.vo.ProductId;
+import app.zylos.catalog.domain.vo.SellerId;
 
 /**
  * Read view of a product for read-your-writes against the write model.
@@ -16,6 +17,7 @@ import app.zylos.catalog.domain.vo.ProductId;
  */
 public record ProductView(
         ProductId id,
+        SellerId sellerId,
         String name,
         @Nullable String description,
         CategoryId categoryId,
@@ -26,6 +28,7 @@ public record ProductView(
 
     public ProductView {
         Objects.requireNonNull(id, "id must not be null");
+        Objects.requireNonNull(sellerId, "sellerId must not be null");
         Objects.requireNonNull(name, "name must not be null");
         Objects.requireNonNull(categoryId, "categoryId must not be null");
         Objects.requireNonNull(attributes, "attributes must not be null");

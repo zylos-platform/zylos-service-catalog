@@ -7,6 +7,7 @@ import org.jspecify.annotations.Nullable;
 
 import app.zylos.catalog.domain.vo.CategoryId;
 import app.zylos.catalog.domain.vo.ProductAttributes;
+import app.zylos.catalog.domain.vo.SellerId;
 
 /**
  * Request to create a product with at least one variant. The {@code idempotencyKey} is the
@@ -16,6 +17,7 @@ import app.zylos.catalog.domain.vo.ProductAttributes;
  */
 public record CreateProductCommand(
         String idempotencyKey,
+        SellerId sellerId,
         String name,
         @Nullable String description,
         CategoryId categoryId,
@@ -24,6 +26,7 @@ public record CreateProductCommand(
 
     public CreateProductCommand {
         Objects.requireNonNull(idempotencyKey, "idempotencyKey must not be null");
+        Objects.requireNonNull(sellerId, "sellerId must not be null");
         Objects.requireNonNull(name, "name must not be null");
         Objects.requireNonNull(categoryId, "categoryId must not be null");
         Objects.requireNonNull(attributes, "attributes must not be null");

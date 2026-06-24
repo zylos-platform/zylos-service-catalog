@@ -41,6 +41,7 @@ public final class Product {
     private static final int MAX_VARIANTS = 100;
 
     private final ProductId id;
+    private final SellerId sellerId;
     private final List<ProductVariant> variants;
     private final List<DomainEvent> domainEvents = new ArrayList<>();
     private String name;
@@ -52,6 +53,7 @@ public final class Product {
 
     private Product(
             ProductId id,
+            SellerId sellerId,
             String name,
             @Nullable String description,
             CategoryId categoryId,
@@ -60,6 +62,7 @@ public final class Product {
             List<ProductVariant> variants,
             long version) {
         this.id = Objects.requireNonNull(id, "id must not be null");
+        this.sellerId = Objects.requireNonNull(sellerId, "sellerId must not be null");
         this.name = normaliseName(name);
         this.description = normaliseDescription(description);
         this.categoryId = Objects.requireNonNull(categoryId, "categoryId must not be null");
@@ -76,20 +79,25 @@ public final class Product {
 
     /**
      * Creates a new product in {@code DRAFT} at version 1 with at least one ({@code ACTIVE}) variant,
-     * recording {@link ProductCreated}.
+     * owned by {@code sellerId}, recording {@link ProductCreated}.
      */
     public static Product create(
             ProductId id,
+            SellerId sellerId,
             String name,
             @Nullable String description,
             CategoryId categoryId,
             ProductAttributes attributes,
             List<VariantDraft> initialVariants) {
+
         Objects.requireNonNull(initialVariants, "initialVariants must not be null");
+
         List<ProductVariant> built = initialVariants.stream()
                 .map(d -> ProductVariant.create(d.id(), d.sku(), d.listPrice(), d.attributes()))
                 .toList();
-        Product product = new Product(id, name, description, categoryId, attributes, ProductStatus.DRAFT, built, 1L);
+
+        Product product =
+                new Product(id, sellerId, name, description, categoryId, attributes, ProductStatus.DRAFT, built, 1L);
         product.record(new ProductCreated(id, product.version));
         return product;
     }
@@ -99,6 +107,7 @@ public final class Product {
      */
     public static Product reconstitute(
             ProductId id,
+            SellerId sellerId,
             String name,
             @Nullable String description,
             CategoryId categoryId,
@@ -110,7 +119,7 @@ public final class Product {
         if (version < 1L) {
             throw new CatalogDomainException("version must be >= 1, was " + version);
         }
-        return new Product(id, name, description, categoryId, attributes, visibility, variants, version);
+        return new Product(id, sellerId, name, description, categoryId, attributes, visibility, variants, version);
     }
 
     private static String normaliseName(String name) {
@@ -267,6 +276,10 @@ public final class Product {
         return id;
     }
 
+    public SellerId sellerId() {
+        return sellerId;
+    }
+
     public String name() {
         return name;
     }
@@ -283,7 +296,7 @@ public final class Product {
         return attributes;
     }
 
-    public ProductStatus status() {
+    public ProductStatus visibility() {
         return status;
     }
 
@@ -346,6 +359,7 @@ public final class Product {
         if (this == o) {
             return true;
         }
+
         if (!(o instanceof Product other)) {
             return false;
         }
@@ -359,6 +373,7 @@ public final class Product {
 
     @Override
     public String toString() {
-        return "Product[id=%s, status=%s, version=%d, variants=%d]".formatted(id, status, version, variants.size());
+        return "Product[id=%s, sellerId=%s, visibility=%s, version=%d, variants=%d]"
+                .formatted(id, sellerId, status, version, variants.size());
     }
 }

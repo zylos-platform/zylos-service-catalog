@@ -16,6 +16,7 @@ import app.zylos.catalog.domain.vo.*;
 class ProductViewTest {
 
     private static final Currency USD = Currency.getInstance("USD");
+    private static final SellerId SELLER = SellerId.newId();
 
     private static ProductVariantView variantView() {
         return new ProductVariantView(
@@ -31,6 +32,7 @@ class ProductViewTest {
         List<ProductVariantView> mutable = new ArrayList<>(List.of(variantView()));
         ProductView view = new ProductView(
                 ProductId.newId(),
+                SELLER,
                 "Name",
                 null,
                 CategoryId.newId(),
@@ -47,6 +49,7 @@ class ProductViewTest {
     void rejectsNullRequiredFields() {
         assertThatThrownBy(() -> new ProductView(
                         null,
+                        SELLER,
                         "Name",
                         null,
                         CategoryId.newId(),
