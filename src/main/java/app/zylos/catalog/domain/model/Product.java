@@ -21,14 +21,14 @@ import app.zylos.catalog.domain.vo.*;
  * <p>Two orthogonal lifecycle axes are coordinated here:
  *
  * <ul>
- *   <li>{@link ProductStatus} — storefront visibility of the product.
+ *   <li>{@link ProductStatus} — storefront status of the product.
  *   <li>{@link VariantStatus} — availability of each variant.
  * </ul>
  *
  * <p>Domain rules across the two axes: discontinuing a product cascades {@code DISCONTINUED} to all
  * its variants; deactivating or discontinuing the last purchasable variant of a {@code PUBLISHED}
  * product auto-demotes the product to {@code UNPUBLISHED}. The reverse — buyer-facing buyability,
- * where product visibility overrides variant availability — is a read/projection concern and is
+ * where product status overrides variant availability — is a read/projection concern and is
  * deliberately not modeled here, to avoid a second source of truth.
  *
  * <p>Per bounded-context discipline, Catalog owns only the seller-set list price (per variant);
@@ -64,7 +64,7 @@ public final class Product {
         this.description = normaliseDescription(description);
         this.categoryId = Objects.requireNonNull(categoryId, "categoryId must not be null");
         this.attributes = Objects.requireNonNull(attributes, "attributes must not be null");
-        this.status = Objects.requireNonNull(status, "visibility must not be null");
+        this.status = Objects.requireNonNull(status, "status must not be null");
         Objects.requireNonNull(variants, "variants must not be null");
         if (variants.isEmpty()) {
             throw new CatalogDomainException("A product must have at least one variant");
@@ -359,6 +359,6 @@ public final class Product {
 
     @Override
     public String toString() {
-        return "Product[id=%s, visibility=%s, version=%d, variants=%d]".formatted(id, status, version, variants.size());
+        return "Product[id=%s, status=%s, version=%d, variants=%d]".formatted(id, status, version, variants.size());
     }
 }
