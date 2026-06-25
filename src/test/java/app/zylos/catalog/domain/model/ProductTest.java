@@ -37,7 +37,7 @@ class ProductTest {
     @Test
     void createStartsInDraftAtVersionOneWithActiveVariant() {
         Product product = newDraftProduct();
-        assertThat(product.visibility()).isEqualTo(ProductStatus.DRAFT);
+        assertThat(product.status()).isEqualTo(ProductStatus.DRAFT);
         assertThat(product.version()).isEqualTo(1L);
         assertThat(product.variants())
                 .singleElement()
@@ -65,7 +65,7 @@ class ProductTest {
                 product.description(),
                 product.categoryId(),
                 product.attributes(),
-                product.visibility(),
+                product.status(),
                 product.variants(),
                 product.version());
         assertThat(rehydrated.sellerId()).isEqualTo(SELLER);
@@ -161,11 +161,11 @@ class ProductTest {
     void publishUnpublishRepublishCycle() {
         Product product = newDraftProduct();
         product.publish();
-        assertThat(product.visibility()).isEqualTo(ProductStatus.PUBLISHED);
+        assertThat(product.status()).isEqualTo(ProductStatus.PUBLISHED);
         product.unpublish();
-        assertThat(product.visibility()).isEqualTo(ProductStatus.UNPUBLISHED);
+        assertThat(product.status()).isEqualTo(ProductStatus.UNPUBLISHED);
         product.publish();
-        assertThat(product.visibility()).isEqualTo(ProductStatus.PUBLISHED);
+        assertThat(product.status()).isEqualTo(ProductStatus.PUBLISHED);
     }
 
     @Test
@@ -173,7 +173,7 @@ class ProductTest {
         Product product = newDraftProduct();
         product.publish();
         product.unpublish();
-        assertThat(product.visibility()).isEqualTo(ProductStatus.UNPUBLISHED);
+        assertThat(product.status()).isEqualTo(ProductStatus.UNPUBLISHED);
         assertThat(ProductStatus.UNPUBLISHED.canTransitionTo(ProductStatus.DRAFT))
                 .isFalse();
     }
@@ -187,7 +187,7 @@ class ProductTest {
 
         product.deactivateVariant(v);
 
-        assertThat(product.visibility()).isEqualTo(ProductStatus.UNPUBLISHED);
+        assertThat(product.status()).isEqualTo(ProductStatus.UNPUBLISHED);
         List<DomainEvent> events = product.pullDomainEvents();
         assertThat(events).hasSize(2);
         assertThat(events).anyMatch(VariantDeactivated.class::isInstance);
@@ -201,7 +201,7 @@ class ProductTest {
         product.publish();
         VariantId v1 = product.variants().get(0).id();
         product.deactivateVariant(v1);
-        assertThat(product.visibility()).isEqualTo(ProductStatus.PUBLISHED);
+        assertThat(product.status()).isEqualTo(ProductStatus.PUBLISHED);
     }
 
     @Test
@@ -212,7 +212,7 @@ class ProductTest {
 
         product.discontinue();
 
-        assertThat(product.visibility()).isEqualTo(ProductStatus.DISCONTINUED);
+        assertThat(product.status()).isEqualTo(ProductStatus.DISCONTINUED);
         assertThat(product.variants()).allMatch(v -> v.status() == VariantStatus.DISCONTINUED);
         assertThat(product.pullDomainEvents()).singleElement().isInstanceOf(ProductDiscontinued.class);
 
@@ -268,7 +268,7 @@ class ProductTest {
                 List.of(variant),
                 7L);
         assertThat(product.version()).isEqualTo(7L);
-        assertThat(product.visibility()).isEqualTo(ProductStatus.PUBLISHED);
+        assertThat(product.status()).isEqualTo(ProductStatus.PUBLISHED);
         assertThat(product.pullDomainEvents()).isEmpty();
     }
 

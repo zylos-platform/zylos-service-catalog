@@ -69,6 +69,7 @@ public final class Product {
         this.attributes = Objects.requireNonNull(attributes, "attributes must not be null");
         this.status = Objects.requireNonNull(status, "status must not be null");
         Objects.requireNonNull(variants, "variants must not be null");
+
         if (variants.isEmpty()) {
             throw new CatalogDomainException("A product must have at least one variant");
         }
@@ -98,7 +99,7 @@ public final class Product {
 
         Product product =
                 new Product(id, sellerId, name, description, categoryId, attributes, ProductStatus.DRAFT, built, 1L);
-        product.record(new ProductCreated(id, product.version));
+        product.recordEvent(new ProductCreated(id, product.version));
         return product;
     }
 
@@ -112,14 +113,14 @@ public final class Product {
             @Nullable String description,
             CategoryId categoryId,
             ProductAttributes attributes,
-            ProductStatus visibility,
+            ProductStatus status,
             List<ProductVariant> variants,
             long version) {
 
         if (version < 1L) {
             throw new CatalogDomainException("version must be >= 1, was " + version);
         }
-        return new Product(id, sellerId, name, description, categoryId, attributes, visibility, variants, version);
+        return new Product(id, sellerId, name, description, categoryId, attributes, status, variants, version);
     }
 
     private static String normaliseName(String name) {
@@ -170,7 +171,7 @@ public final class Product {
         this.categoryId = Objects.requireNonNull(categoryId, "categoryId must not be null");
         this.attributes = Objects.requireNonNull(attributes, "attributes must not be null");
         bumpVersion();
-        record(new ProductUpdated(id, version));
+        recordEvent(new ProductUpdated(id, version));
     }
 
     public ProductVariant addVariant(VariantDraft draft) {
@@ -185,7 +186,7 @@ public final class Product {
         ProductVariant variant = ProductVariant.create(draft.id(), draft.sku(), draft.listPrice(), draft.attributes());
         variants.add(variant);
         bumpVersion();
-        record(new VariantAdded(id, variant.id(), version));
+        recordEvent(new VariantAdded(id, variant.id(), version));
         return variant;
     }
 
@@ -201,7 +202,7 @@ public final class Product {
         ensureSkuUniqueExcluding(variantId, sku);
         variant.changeBusinessDetails(sku, listPrice, attributes);
         bumpVersion();
-        record(new VariantUpdated(id, variantId, version));
+        recordEvent(new VariantUpdated(id, variantId, version));
     }
 
     public void activateVariant(VariantId variantId) {
@@ -209,7 +210,7 @@ public final class Product {
         ProductVariant variant = requireVariant(variantId);
         variant.transitionTo(VariantStatus.ACTIVE);
         bumpVersion();
-        record(new VariantActivated(id, variantId, version));
+        recordEvent(new VariantActivated(id, variantId, version));
     }
 
     public void deactivateVariant(VariantId variantId) {
@@ -217,7 +218,7 @@ public final class Product {
         ProductVariant variant = requireVariant(variantId);
         variant.transitionTo(VariantStatus.INACTIVE);
         bumpVersion();
-        record(new VariantDeactivated(id, variantId, version));
+        recordEvent(new VariantDeactivated(id, variantId, version));
         autoDemoteIfNoPurchasableVariant();
     }
 
@@ -226,7 +227,7 @@ public final class Product {
         ProductVariant variant = requireVariant(variantId);
         variant.transitionTo(VariantStatus.DISCONTINUED);
         bumpVersion();
-        record(new VariantDiscontinued(id, variantId, version));
+        recordEvent(new VariantDiscontinued(id, variantId, version));
         autoDemoteIfNoPurchasableVariant();
     }
 
@@ -239,14 +240,14 @@ public final class Product {
 
         status = ProductStatus.PUBLISHED;
         bumpVersion();
-        record(new ProductPublished(id, version));
+        recordEvent(new ProductPublished(id, version));
     }
 
     public void unpublish() {
         status.ensureCanTransitionTo(ProductStatus.UNPUBLISHED);
         status = ProductStatus.UNPUBLISHED;
         bumpVersion();
-        record(new ProductUnpublished(id, version));
+        recordEvent(new ProductUnpublished(id, version));
     }
 
     public void discontinue() {
@@ -260,7 +261,7 @@ public final class Product {
         }
 
         bumpVersion();
-        record(new ProductDiscontinued(id, version));
+        recordEvent(new ProductDiscontinued(id, version));
     }
 
     /**
@@ -296,7 +297,7 @@ public final class Product {
         return attributes;
     }
 
-    public ProductStatus visibility() {
+    public ProductStatus status() {
         return status;
     }
 
@@ -312,7 +313,7 @@ public final class Product {
         if (status == ProductStatus.PUBLISHED
                 && variants.stream().noneMatch(v -> v.status().isPurchasable())) {
             status = ProductStatus.UNPUBLISHED;
-            record(new ProductUnpublished(id, version)); // shares the current command's version
+            recordEvent(new ProductUnpublished(id, version)); // shares the current command's version
         }
     }
 
@@ -340,7 +341,7 @@ public final class Product {
         }
     }
 
-    private void record(DomainEvent event) {
+    private void recordEvent(DomainEvent event) {
         domainEvents.add(event);
     }
 
@@ -373,7 +374,7 @@ public final class Product {
 
     @Override
     public String toString() {
-        return "Product[id=%s, sellerId=%s, visibility=%s, version=%d, variants=%d]"
+        return "Product[id=%s, sellerId=%s, status=%s, version=%d, variants=%d]"
                 .formatted(id, sellerId, status, version, variants.size());
     }
 }

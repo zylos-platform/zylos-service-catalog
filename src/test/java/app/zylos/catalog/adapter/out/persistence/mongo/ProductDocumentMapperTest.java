@@ -57,7 +57,7 @@ class ProductDocumentMapperTest {
         assertThat(restored.description()).isEqualTo(original.description());
         assertThat(restored.categoryId()).isEqualTo(original.categoryId());
         assertThat(restored.attributes()).isEqualTo(original.attributes());
-        assertThat(restored.visibility()).isEqualTo(original.visibility());
+        assertThat(restored.status()).isEqualTo(original.status());
         assertThat(restored.version()).isEqualTo(original.version());
         assertThat(restored.variants()).hasSize(2);
 

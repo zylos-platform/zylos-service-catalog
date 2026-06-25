@@ -20,7 +20,7 @@
             "name": "attributes",
             "type": {
                 "type": "array",
-                "items": "app.zylos.contracts.catalog.v1.Attribute"
+                "items": "app.zylos.contracts.catalog.v1.AttributeEntry"
             },
             "default": []
         },

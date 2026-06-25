@@ -20,6 +20,13 @@ zylos:
     expected-audience: zylos-internal-catalog
     actor-chains:
       enabled: true
+  kafka:
+    schema-registry-url: ${ZYLOS_CATALOG_SCHEMA_REGISTRY_URL:http://schema-registry.kafka.svc.cluster.local:8081}
+    auto-register-schemas: ${ZYLOS_CATALOG_AUTO_REGISTER_SCHEMAS:true}
+  catalog:
+    event-topic: ${ZYLOS_CATALOG_EVENT_TOPIC:catalog.product.events.v1}
+  service:
+    version: ${ZYLOS_SERVICE_VERSION:0.0.0}
 
 management:
   server:

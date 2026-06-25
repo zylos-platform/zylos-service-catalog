@@ -1,6 +1,6 @@
 {
     "type": "record",
-    "name": "Attribute",
+    "name": "AttributeEntry",
     "namespace": "app.zylos.contracts.catalog.v1",
     "doc": "One typed product/variant attribute. Values are string-encoded with a type tag (TEXT|NUMBER|BOOLEAN); NUMBER uses the canonical BigDecimal string form, preserving precision and avoiding Avro decimal's fixed precision/scale constraints.",
     "fields": [

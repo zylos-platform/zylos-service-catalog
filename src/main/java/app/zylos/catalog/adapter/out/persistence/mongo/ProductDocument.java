@@ -16,7 +16,7 @@ public record ProductDocument(
         @Nullable String description,
 
         String categoryId,
-        List<AttributeEntryDocument> attributes,
-        String visibility,
+        List<AttributeDocument> attributes,
+        String status,
         List<VariantDocument> variants,
         long version) {}

@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 
 import org.jspecify.annotations.Nullable;
 
-public record AttributeEntryDocument(
+public record AttributeDocument(
         String name,
         String type,
         @Nullable String text,

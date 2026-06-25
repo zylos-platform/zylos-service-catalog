@@ -10,5 +10,5 @@ public record VariantDocument(
         String sku,
         long priceMinorUnits,
         String priceCurrency,
-        List<AttributeEntryDocument> attributes,
+        List<AttributeDocument> attributes,
         String status) {}
