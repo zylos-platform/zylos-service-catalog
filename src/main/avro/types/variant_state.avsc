@@ -1,0 +1,32 @@
+{
+    "type": "record",
+    "name": "VariantState",
+    "namespace": "app.zylos.contracts.catalog.v1",
+    "doc": "Variant slice of the product state snapshot.",
+    "fields": [
+        {
+            "name": "variantId",
+            "type": "string"
+        },
+        {
+            "name": "sku",
+            "type": "string"
+        },
+        {
+            "name": "listPrice",
+            "type": "app.zylos.contracts.common.v1.Money"
+        },
+        {
+            "name": "attributes",
+            "type": {
+                "type": "array",
+                "items": "app.zylos.contracts.catalog.v1.Attribute"
+            },
+            "default": []
+        },
+        {
+            "name": "status",
+            "type": "string"
+        }
+    ]
+}
