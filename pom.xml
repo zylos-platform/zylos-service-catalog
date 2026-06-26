@@ -37,6 +37,21 @@
     <git.commit.id.full>local-untracked-commit</git.commit.id.full>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-compress</artifactId>
+        <version>1.26.2</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.errorprone</groupId>
+        <artifactId>error_prone_annotations</artifactId>
+        <version>2.43.0</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -53,6 +68,10 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webmvc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-mongodb</artifactId>
     </dependency>
     <dependency>
       <groupId>io.micrometer</groupId>
@@ -72,10 +91,20 @@
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.confluent</groupId>
+      <artifactId>kafka-avro-serializer</artifactId>
+      <version>8.0.0</version>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-mongodb-test</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -98,6 +127,21 @@
       <artifactId>spring-security-test</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-mongodb</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <repositories>
@@ -110,6 +154,10 @@
       </snapshots>
       <id>github</id>
       <url>https://maven.pkg.github.com/zylos-platform/zylos-service-parent</url>
+    </repository>
+    <repository>
+      <id>confluent</id>
+      <url>https://packages.confluent.io/maven/</url>
     </repository>
   </repositories>
 
@@ -129,10 +177,14 @@
           <execution>
             <id>schemas</id>
             <configuration>
+              <stringType>String</stringType>
+              <dateTimeLogicalTypeImplementation>jsr310</dateTimeLogicalTypeImplementation>
               <sourceDirectory>${project.basedir}/src/main/avro/events</sourceDirectory>
               <imports>
                 <import>${project.basedir}/src/main/avro/types/money.avsc</import>
                 <import>${project.basedir}/src/main/avro/types/producer.avsc</import>
+                <import>${project.basedir}/src/main/avro/types/attribute_entry.avsc</import>
+                <import>${project.basedir}/src/main/avro/types/variant_state.avsc</import>
                 <import>${project.basedir}/src/main/avro/types/product_state.avsc</import>
               </imports>
             </configuration>

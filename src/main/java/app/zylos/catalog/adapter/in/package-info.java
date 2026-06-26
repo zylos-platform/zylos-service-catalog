@@ -1,4 +1,4 @@
 @NullMarked
-package app.zylos.catalog.adapters.outbound;
+package app.zylos.catalog.adapter.in;
 
 import org.jspecify.annotations.NullMarked;

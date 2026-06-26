@@ -19,7 +19,7 @@ class HexagonalBoundaryTest {
             .layer("Application")
             .definedBy("app.zylos.catalog.application..")
             .layer("Adapters")
-            .definedBy("app.zylos.catalog.adapters..")
+            .definedBy("app.zylos.catalog.adapter..")
             .whereLayer("Adapters")
             .mayNotBeAccessedByAnyLayer()
             .whereLayer("Application")
