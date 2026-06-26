@@ -81,12 +81,6 @@
       <groupId>com.github.f4b6a3</groupId>
       <artifactId>uuid-creator</artifactId>
     </dependency>
-
-    <dependency>
-      <groupId>app.zylos</groupId>
-      <artifactId>zylos-infra-security-starter</artifactId>
-    </dependency>
-
     <dependency>
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
@@ -95,6 +89,16 @@
       <groupId>io.confluent</groupId>
       <artifactId>kafka-avro-serializer</artifactId>
       <version>8.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opensearch.client</groupId>
+      <artifactId>opensearch-java</artifactId>
+      <version>3.9.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>app.zylos</groupId>
+      <artifactId>zylos-infra-security-starter</artifactId>
     </dependency>
 
     <dependency>

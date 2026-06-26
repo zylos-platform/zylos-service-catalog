@@ -27,6 +27,10 @@ zylos:
     event-topic: ${ZYLOS_CATALOG_EVENT_TOPIC:catalog.product.events.v1}
   service:
     version: ${ZYLOS_SERVICE_VERSION:0.0.0}
+  opensearch:
+    uri: ${ZYLOS_CATALOG_OPENSEARCH_URI:http://opensearch.opensearch.svc.cluster.local:9200}
+    alias: ${ZYLOS_CATALOG_OPENSEARCH_ALIAS:catalog-products}
+    index: ${ZYLOS_CATALOG_OPENSEARCH_INDEX:catalog-products-v1}
 
 management:
   server:
