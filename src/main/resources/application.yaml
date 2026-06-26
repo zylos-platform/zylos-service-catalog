@@ -7,7 +7,7 @@ spring:
     mongodb:
       auto-index-creation: false
   mongodb:
-    uri: ${ZYLOS_CATALOG_MONGODB_URI}
+    uri: mongodb://catalog:${ZYLOS_CATALOG_MONGODB_PASSWORD}@${ZYLOS_CATALOG_MONGODB_HOST:catalog-mongodb-rs0.mongodb.svc.cluster.local}:27017/catalog?replicaSet=rs0&authSource=catalog
 
 server:
   port: 8080
